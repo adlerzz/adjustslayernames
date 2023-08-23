@@ -2,9 +2,10 @@ import { Mapper } from "./mapper";
 import { Pointer } from "./pointer";
 import { Reader } from "./reader";
 import { WritePointer } from "./write-pointer";
-import * as utils from "./utils";
+import * as utils from "../utils/utils";
+import * as consts from "../utils/consts";
 
-export class ActionComposer {
+export class Flow {
     private _filemap: Mapper;
     private _pLayerAndMaskDataLength: Pointer<number>;
     private _pLayerDataLength: Pointer<number>;
@@ -13,9 +14,6 @@ export class ActionComposer {
     private _layerWPointers: Array<WritePointer<number|Buffer|string>> = [];
     private _wpLayerAndMaskDataLength: WritePointer<number>;
     private _wpLayerDataLength: WritePointer<number>;
-
-    private static readonly DUPLICATE_SUFFIX = "_DUP_";
-    private static readonly VALID_LAYER_SIGNATURES = ["8BIM", "8B64"];
 
     public doRead(filename: string): void {
         console.info(`start reading with "${filename}"`);
@@ -37,13 +35,13 @@ export class ActionComposer {
 
             while(shift > 8){
                 const aSignature = this._filemap.readBytes(4).toString();
-                if(!ActionComposer.VALID_LAYER_SIGNATURES.includes(aSignature)){
+                if(!consts.VALID_LAYER_SIGNATURES.includes(aSignature)){
                     throw new Error("File is corrupted");
                 }
 
                 const aKey = this._filemap.readBytes(4).toString();
                 const aValue = this._filemap.markUTF16();
-                if(aKey === "luni"){
+                if(aKey === consts.UNICODE_LAYER_NAME){
                     const uLayerName = aValue.value
                         .subarray(4)
                         .swap16()
@@ -59,12 +57,9 @@ export class ActionComposer {
                         this._layerPointers.push([extraFieldsLen, layerName, aValue]);
                     }
                 }
-
                 shift -= 8 + aValue.size;
-
             }
         }
-
     }
 
     public doTranslate(){
@@ -74,7 +69,7 @@ export class ActionComposer {
             const repeats = this._layerNames.get(newLayerName)!;
             this._layerNames.set(newLayerName, repeats - 1);
             if(repeats > 1){
-                newLayerName += ActionComposer.DUPLICATE_SUFFIX + repeats;
+                newLayerName += consts.DUPLICATE_SUFFIX + repeats;
             }
 
             const wpLayerName = new WritePointer(layer, newLayerName, utils.getPaddedLength(newLayerName));

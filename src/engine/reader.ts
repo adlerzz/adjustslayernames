@@ -1,3 +1,4 @@
+import { HEADER_SIGNATURE } from "../utils/consts";
 import { Mapper } from "./mapper";
 import { Pointer } from "./pointer";
 
@@ -10,7 +11,7 @@ export class Reader {
 
     public readFileHeader(): void {
         const signature = this.f.readBytes(4).toString();
-        if(signature !== "8BPS") {
+        if(signature !== HEADER_SIGNATURE) {
             throw new Error("Bad format");
         }
         const version = this.f.readUInt16();
@@ -27,13 +28,11 @@ export class Reader {
 
     public readColorModeData(): void {
         const colorDataLength = this.f.readUInt32();
-        console.info(`colorDataLength: ${colorDataLength}`);
         this.f.moveOn(colorDataLength);
     }
 
     public readImageResources(): void {
         const imgResLength = this.f.readUInt32();
-        console.info(`imgResLength: ${imgResLength}`);
         this.f.moveOn(imgResLength);
     }
 

@@ -1,8 +1,7 @@
 import { Buffer } from "buffer";
 import {Pointer} from "./pointer";
-import * as utils from "./utils";
+import * as utils from "../utils/utils";
 import fs from "fs";
-import path from "path";
 import { WritePointer } from "./write-pointer";
 
 export class Mapper {
@@ -57,13 +56,13 @@ export class Mapper {
     }
 
     public markUInt8(): Pointer<number> {
-        const p = new Pointer<number>(this._position, 1, 'uint');
+        const p = new Pointer<number>(this._position, 1, "uint");
         this.readPointer(p);
         return p;
     }
 
     public markUInt32(): Pointer<number> {
-        const p = new Pointer<number>(this._position, 4, 'uint');
+        const p = new Pointer<number>(this._position, 4, "uint");
         this.readPointer(p);
         return p;
     }

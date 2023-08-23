@@ -1,4 +1,4 @@
-import { DataType } from "./utils";
+import { DataType } from "../utils/utils";
 
 export class Pointer<T> {
     private _value: T;
