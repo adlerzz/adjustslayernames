@@ -1,7 +1,7 @@
 import PromptSync from "prompt-sync";
 import path from "path";
 import { Flow } from "./engine/flow";
-import { DEFAULT_OUTPUT_SUFFIX } from "./utils/consts";
+import { DEFAULT_OUTPUT_SUFFIX } from "./helpers/consts";
 const prompt = PromptSync({sigint: true});
 
 function main(): void {

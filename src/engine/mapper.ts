@@ -1,6 +1,6 @@
 import { Buffer } from "buffer";
 import {Pointer} from "./pointer";
-import * as utils from "../utils/utils";
+import * as utils from "../helpers/utils";
 import fs from "fs";
 import { WritePointer } from "./write-pointer";
 
@@ -30,9 +30,7 @@ export class Mapper {
             size = utils.getPaddedLength(rawstr);
             pointer.size = size;
         } else if(pointer.type === "utf16"){
-            size = this._content.subarray(pos, pos + 4).readIntBE(0, 4) + 4;
-            pointer.size = size;
-            (pointer as Pointer<Buffer>).value = this._content.subarray(pos + 4, pos + size);
+            (pointer as Pointer<Buffer>).value = this._content.subarray(pos, pos + size);
         }
         this._position += size;
     }
@@ -73,8 +71,8 @@ export class Mapper {
         return p;
     }
 
-    public markUTF16(): Pointer<Buffer> {
-        const p = new Pointer<Buffer>(this._position, 4, "utf16");
+    public markUTF16(size: number): Pointer<Buffer> {
+        const p = new Pointer<Buffer>(this._position, size, "utf16");
         this.readPointer(p);
         return p;
     }

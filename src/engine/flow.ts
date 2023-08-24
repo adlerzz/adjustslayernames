@@ -2,15 +2,15 @@ import { Mapper } from "./mapper";
 import { Pointer } from "./pointer";
 import { Reader } from "./reader";
 import { WritePointer } from "./write-pointer";
-import * as utils from "../utils/utils";
-import * as consts from "../utils/consts";
+import * as utils from "../helpers/utils";
+import * as consts from "../helpers/consts";
 
 export class Flow {
     private _filemap: Mapper;
     private _pLayerAndMaskDataLength: Pointer<number>;
     private _pLayerDataLength: Pointer<number>;
     private _layerNames = new Map<string, number>;
-    private _layerPointers: Array<[Pointer<number>, Pointer<string>, Pointer<Buffer>]> = [];
+    private _layerPointers: Array<[Pointer<number>, Pointer<string>, Pointer<number>, Pointer<Buffer>]> = [];
     private _layerWPointers: Array<WritePointer<number|Buffer|string>> = [];
     private _wpLayerAndMaskDataLength: WritePointer<number>;
     private _wpLayerDataLength: WritePointer<number>;
@@ -31,72 +31,40 @@ export class Flow {
             const [extraFieldsLen, delta] = reader.readLayerPre();
             const layerName = this._filemap.markStr();
             
-            let shift = extraFieldsLen.value - delta - layerName.size;
+            const shift = extraFieldsLen.value - delta - layerName.size;
 
-            while(shift > 8){
-                const aSignature = this._filemap.readBytes(4).toString();
-                if(!consts.VALID_LAYER_SIGNATURES.includes(aSignature)){
-                    throw new Error("File is corrupted");
-                }
-
-                const aKey = this._filemap.readBytes(4).toString();
-                const aValue = this._filemap.markUTF16();
-                if(aKey === consts.UNICODE_LAYER_NAME){
-                    const uLayerName = aValue.value
-                        .subarray(4)
-                        .swap16()
-                        .toString("utf16le")
-                        .replace(/\x00+$/, "");
-                    const newLayerName = utils.transliterate(uLayerName);
-                    if(!newLayerName.startsWith("</")){
-                        if(this._layerNames.has(newLayerName)){
-                            this._layerNames.set(newLayerName, this._layerNames.get(newLayerName)! + 1);
-                        } else {
-                            this._layerNames.set(newLayerName, 1);
-                        }
-                        this._layerPointers.push([extraFieldsLen, layerName, aValue]);
-                    }
-                }
-                shift -= 8 + aValue.size;
-            }
+            reader.readLayerData(this._layerNames, shift, (layerUNameSize, layerUName) => {
+                this._layerPointers.push([extraFieldsLen, layerName, layerUNameSize, layerUName]);
+            });
         }
     }
 
     public doTranslate(){
         this._layerPointers.forEach( (ptrs) => {
-            const [extra, layer, uLayer] = ptrs;
-            let newLayerName = utils.transliterate(layer.value);
+            const [extraFieldsLen, layerName, layerUNameSize, layerUName] = ptrs;
+            let newLayerName = utils.transliterate(layerName.value);
             const repeats = this._layerNames.get(newLayerName)!;
             this._layerNames.set(newLayerName, repeats - 1);
             if(repeats > 1){
                 newLayerName += consts.DUPLICATE_SUFFIX + repeats;
             }
 
-            const wpLayerName = new WritePointer(layer, newLayerName, utils.getPaddedLength(newLayerName));
+            const wpLayerName = new WritePointer(layerName, newLayerName, utils.getPaddedLength(newLayerName));
 
-            const ubl = Buffer.alloc(4);
-            ubl.writeInt32BE(newLayerName.length);
-            const ubb = Buffer.alloc(newLayerName.length*2);
+            const [uNameSize, bUName] = utils.uNameToBytes(newLayerName);
+            const wpLayerUNameSize = new WritePointer(layerUNameSize, uNameSize, layerUNameSize.size);
+            const wpLayerUName = new WritePointer(layerUName, bUName, bUName.byteLength);
+            const wpExtra = new WritePointer(extraFieldsLen, extraFieldsLen.value + wpLayerName.offset() + wpLayerUName.offset(), extraFieldsLen.size);
 
-            ubb.write(newLayerName, "utf16le");
-            ubb.swap16();
-            const ube = Buffer.alloc(2, 0);
-            const ub = Buffer.concat([ubl, ubb, ube]);
-            const ul = Buffer.alloc(4);
-            ul.writeInt16BE( ul.byteLength );
-
-            const wpUName = new WritePointer(uLayer, Buffer.concat([ul, ub]), ub.byteLength + 4);
-            const wpExtra = new WritePointer(extra, extra.value + wpLayerName.offset() + wpUName.offset(), extra.size);
-
-            this._layerWPointers.push(wpExtra, wpLayerName, wpUName);
+            this._layerWPointers.push(wpExtra, wpLayerName, wpLayerUNameSize, wpLayerUName);
 
         });
     }
 
     public doShifts(){
-        const sum = this._layerWPointers.reduce( (sh, p) => {
-            p.shift(sh);
-            return sh + p.offset();
+        const sum = this._layerWPointers.reduce( (sh, ptr) => {
+            ptr.shift(sh);
+            return sh + ptr.offset();
         }, 0);
 
         console.log(`Summary size shift : ${sum}`);
@@ -112,8 +80,8 @@ export class Flow {
         let counter = 1;
         const allOf = this._layerWPointers.length;
 
-        this._layerWPointers.forEach( (p) => {
-            this._filemap.writePointer(p);
+        this._layerWPointers.forEach( (pointer) => {
+            this._filemap.writePointer(pointer);
             console.log(`${counter} of ${allOf}`);
             counter++;
         });

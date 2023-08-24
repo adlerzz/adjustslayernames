@@ -1,6 +1,7 @@
-import { HEADER_SIGNATURE } from "../utils/consts";
+import * as consts  from "../helpers/consts";
 import { Mapper } from "./mapper";
 import { Pointer } from "./pointer";
+import * as utils from "../helpers/utils";
 
 export class Reader {
     private f: Mapper;
@@ -11,7 +12,7 @@ export class Reader {
 
     public readFileHeader(): void {
         const signature = this.f.readBytes(4).toString();
-        if(signature !== HEADER_SIGNATURE) {
+        if(signature !== consts.HEADER_SIGNATURE) {
             throw new Error("Bad format");
         }
         const version = this.f.readUInt16();
@@ -40,12 +41,43 @@ export class Reader {
         this.f.moveOn(16);
         const channelCount = this.f.readUInt16();
         this.f.moveOn(channelCount * 6 + 12);
-        const extraFieldsLen = this.f.markUInt32();
+        const pExtraFieldsLength = this.f.markUInt32();
         const maskDataLength = this.f.readUInt32();
         this.f.moveOn(maskDataLength);
         const brDataLength = this.f.readUInt32();
         this.f.moveOn(brDataLength);
-        const delta = 4 + maskDataLength + 4 + brDataLength;
-        return [extraFieldsLen, delta];
+        const delta = 8 + maskDataLength + brDataLength;
+        return [pExtraFieldsLength, delta];
+    }
+
+    public readLayerData(layerNamesMap: Map<string, number>, shift: number, callback: (pSize: Pointer<number>, pUName: Pointer<Buffer>) => void): void {
+
+        while(shift > 12){
+            const aSignature = this.f.readBytes(4).toString();
+            
+            if(!consts.VALID_LAYER_SIGNATURES.includes(aSignature)){
+                throw new Error("File is corrupted");
+            }
+
+            const layerDataKey = this.f.readBytes(4).toString();
+            const pLayerDataSize = this.f.markUInt32();
+
+            if(layerDataKey === consts.UNICODE_LAYER_NAME){
+                const pLayerUName = this.f.markUTF16(pLayerDataSize.value);
+                const uLayerName = pLayerUName.value
+                    .swap16()
+                    .toString("utf16le")
+                    .replace(/\x00+$/, "");
+                const newLayerName = utils.transliterate(uLayerName);
+                if(!newLayerName.startsWith("</")){
+                    utils.count(layerNamesMap, newLayerName);
+                    callback(pLayerDataSize, pLayerUName);
+                }
+            } else {
+                this.f.moveOn(pLayerDataSize.value);    
+            }
+            shift -= 12 + pLayerDataSize.value;
+        }
+
     }
 }
