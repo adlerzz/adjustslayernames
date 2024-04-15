@@ -1,4 +1,4 @@
-import { DataType } from "../helpers/utils";
+import { DataType } from "./abstract-pointer";
 
 export class Pointer<T> {
     private _value: T;
@@ -6,7 +6,7 @@ export class Pointer<T> {
     private _size: number;
     private _type: string;
 
-    constructor(position: number, size: number, type: DataType){
+    constructor(position: number, size: number, type: DataType | string){
         this._position = position;
         this._size = size;
         this._type = type;

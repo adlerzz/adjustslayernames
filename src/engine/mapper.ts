@@ -26,7 +26,7 @@ export class Mapper {
         } else if(pointer.type === "str"){
             const length = this._content.readUInt8(pos);
             const rawstr = utils.win1251BufferToString(this._content.subarray(pos+1, pos + length + 1));
-            (pointer as Pointer<string>).value = rawstr;
+            (pointer as Pointer<string>).value = rawstr; 
             size = utils.getPaddedLength(rawstr);
             pointer.size = size;
         } else if(pointer.type === "utf16"){
@@ -79,7 +79,6 @@ export class Mapper {
 
     public writePointer<T>(wpointer: WritePointer<T>): void {
         const pos = wpointer.newPosition;
-       
         if(wpointer.type === "uint") {
             if(wpointer.origin.size === 4) {
                 this._content.writeInt32BE(wpointer.newValue as number, pos);

@@ -40,13 +40,15 @@ export class Flow {
     }
 
     public doTranslate(){
+        console.log({layerNames: this._layerNames});
         this._layerPointers.forEach( (ptrs) => {
             const [extraFieldsLen, layerName, layerUNameSize, layerUName] = ptrs;
             let newLayerName = utils.transliterate(layerName.value);
-            const repeats = this._layerNames.get(newLayerName)!;
+            const repeats = this._layerNames.get(newLayerName) ?? 0;
             this._layerNames.set(newLayerName, repeats - 1);
             if(repeats > 1){
                 newLayerName += consts.DUPLICATE_SUFFIX + repeats;
+                console.log({newLayerName});
             }
 
             const wpLayerName = new WritePointer(layerName, newLayerName, utils.getPaddedLength(newLayerName));
@@ -59,6 +61,7 @@ export class Flow {
             this._layerWPointers.push(wpExtra, wpLayerName, wpLayerUNameSize, wpLayerUName);
 
         });
+        // console.log({layerPointers: this._layerPointers.flat().filter( lp => lp.type === "str")});
     }
 
     public doShifts(){

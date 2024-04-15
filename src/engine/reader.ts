@@ -67,7 +67,8 @@ export class Reader {
                 const uLayerName = pLayerUName.value
                     .swap16()
                     .toString("utf16le")
-                    .replace(/\x00+$/, "");
+                    .replace(/\x00+$/, "")
+                    .slice(2);
                 const newLayerName = utils.transliterate(uLayerName);
                 if(!newLayerName.startsWith("</")){
                     utils.count(layerNamesMap, newLayerName);

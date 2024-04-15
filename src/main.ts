@@ -8,7 +8,7 @@ function main(): void {
     const args = process.argv;
     console.log(args);
     if(args.length < 3){
-        console.error("No input file")
+        console.error("No input file");
         return;
     }
 

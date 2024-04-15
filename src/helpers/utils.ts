@@ -8,7 +8,9 @@ export function getPaddedLength(str: string): number {
 
 export function count(map: Map<string, number>, key: string){
     if(map.has(key)){
-        map.set(key, map.get(key)! + 1);
+        const repeats = map.get(key) ?? 0;
+        console.log({key, repeats});
+        map.set(key, repeats + 1);
     } else {
         map.set(key, 1);
     }
@@ -37,6 +39,7 @@ export function uNameToBytes(text: string): [number, Buffer]{
 
     return [size, bString];
 }
+
 
 const ANSI_TRANSLIT_MAP = {
     0xA8: "Ё", 0xB8: "ё",
@@ -79,8 +82,6 @@ const UTF16_TRANSLIT_MAP = {
 export function transliterate(text: string) {
     return text.trim().split("").map( ch => UTF16_TRANSLIT_MAP[ch] ?? ch).join("");
 }
-
-export type DataType = "uint" | "int" | "str" | "utf16";
 
 export function win1251BufferToString(buffer: Buffer): string {
     return [...buffer].map( t => t > 0x7F ? ANSI_TRANSLIT_MAP[t] ?? "_" : String.fromCodePoint(t)).join("");
