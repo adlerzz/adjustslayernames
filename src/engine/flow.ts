@@ -16,7 +16,7 @@ export class Flow {
     private _wpLayerDataLength: WritePointer<number>;
 
     public doRead(filename: string): void {
-        console.info(`start reading with "${filename}"`);
+        console.info(`reading with "${filename}"`);
         this._filemap = new Mapper(filename);
         const reader = new Reader(this._filemap);
         reader.readFileHeader();
@@ -40,7 +40,7 @@ export class Flow {
     }
 
     public doTranslate(){
-        console.log({layerNames: this._layerNames});
+        console.info(`translating...`);
         this._layerPointers.forEach( (ptrs) => {
             const [extraFieldsLen, layerName, layerUNameSize, layerUName] = ptrs;
             let newLayerName = utils.transliterate(layerName.value);
@@ -48,7 +48,7 @@ export class Flow {
             this._layerNames.set(newLayerName, repeats - 1);
             if(repeats > 1){
                 newLayerName += consts.DUPLICATE_SUFFIX + repeats;
-                console.log({newLayerName});
+                console.log( `$'${newLayerName}'`);
             }
 
             const wpLayerName = new WritePointer(layerName, newLayerName, utils.getPaddedLength(newLayerName));
@@ -59,24 +59,24 @@ export class Flow {
             const wpExtra = new WritePointer(extraFieldsLen, extraFieldsLen.value + wpLayerName.offset() + wpLayerUName.offset(), extraFieldsLen.size);
 
             this._layerWPointers.push(wpExtra, wpLayerName, wpLayerUNameSize, wpLayerUName);
-
         });
-        // console.log({layerPointers: this._layerPointers.flat().filter( lp => lp.type === "str")});
     }
 
     public doShifts(){
+        console.info(`changes calculating...`);
         const sum = this._layerWPointers.reduce( (sh, ptr) => {
             ptr.shift(sh);
             return sh + ptr.offset();
         }, 0);
 
-        console.log(`Summary size shift : ${sum}`);
+        console.log(`summary size shift : ${sum}`);
 
         this._wpLayerAndMaskDataLength = new WritePointer(this._pLayerAndMaskDataLength, this._pLayerAndMaskDataLength.value + sum, this._pLayerAndMaskDataLength.size)
         this._wpLayerDataLength = new WritePointer(this._pLayerDataLength, this._pLayerDataLength.value + sum, this._pLayerDataLength.size);
     }
 
     public doWrite(filename: string){
+        console.info(`changes applying...`);
         this._filemap.writePointer(this._wpLayerAndMaskDataLength);
         this._filemap.writePointer(this._wpLayerDataLength);
 
@@ -88,6 +88,7 @@ export class Flow {
             console.log(`${counter} of ${allOf}`);
             counter++;
         });
+        console.info(`writing to "${filename}"`);
         this._filemap.save(filename);
     }
 }

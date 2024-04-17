@@ -13,15 +13,13 @@ function main(): void {
     }
 
     const inputFile = args[2];
-    console.log({inputFile});
+    
 
     const parsedPath = path.parse(inputFile);
 
-    const outputFile = (args.length > 3)
-        ? args[3] 
-        : parsedPath.dir + parsedPath.name + DEFAULT_OUTPUT_SUFFIX + parsedPath.ext
-    ;
+    const outputFile = (args.length > 3) ? args[3]  : path.resolve(parsedPath.dir, parsedPath.name + DEFAULT_OUTPUT_SUFFIX + parsedPath.ext);
 
+    console.log({inputFile, outputFile});
     const flow = new Flow();
     flow.doRead(inputFile);
     flow.doTranslate();

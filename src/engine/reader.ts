@@ -17,7 +17,7 @@ export class Reader {
         }
         const version = this.f.readUInt16();
         if(version === 1){
-
+            // 
         }
         else if(version === 2) {
             throw new Error("Unsupported file format (PSB)");

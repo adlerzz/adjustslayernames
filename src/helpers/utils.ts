@@ -9,7 +9,6 @@ export function getPaddedLength(str: string): number {
 export function count(map: Map<string, number>, key: string){
     if(map.has(key)){
         const repeats = map.get(key) ?? 0;
-        console.log({key, repeats});
         map.set(key, repeats + 1);
     } else {
         map.set(key, 1);
